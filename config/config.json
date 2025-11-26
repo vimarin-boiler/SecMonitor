@@ -1,0 +1,24 @@
+{
+  "Smtp": {
+    "Host": "mail.smtp2go.com",
+    "Port": 2525,
+    "Username": "mta@boiler.cl",
+    "Password": "BzdkA646mt",
+    "From": "mta@boiler.cl",
+    "To": ["vimarin@boiler.cl"]
+  },
+  "Servers": [
+    {
+      "Name": "PITU",
+      "Host": "10.192.10.9",
+      "Username": "PITU\\monitor",
+      "Password": "monitor",
+      "CriticalServices": ["MSSQLSERVER", "W3SVC"]
+    }
+  ],
+  "Thresholds": {
+    "CpuCritical": 90,
+    "RamFreeGBWarning": 2,
+    "DiskFreeGBWarning": 10
+  }
+}
