@@ -1,4 +1,5 @@
 import winrm
+from monitor.analyzers import normalize_field
 from datetime import datetime, timedelta
 import json
 
@@ -12,7 +13,7 @@ def create_session(host: str, username: str, password: str) -> winrm.Session:
     )
 
 def _run_ps_json(session: winrm.Session, script: str):
-    print (f"Running PowerShell script:\n{script}")
+    # print (f"Running PowerShell script:\n{script}")
     result = session.run_ps(script)
     if result.status_code != 0:
         # Podrías loggear result.std_err aquí
@@ -53,6 +54,14 @@ def get_system_resources(session: winrm.Session):
     mem = _run_ps_json(session, mem_script) or {}
     cpu = _run_ps_json(session, cpu_script) or {}
 
+    disk = normalize_field(disk, [])
+    mem  = normalize_field(mem, {})
+    cpu  = normalize_field(cpu, {})
+
+    # Si ConvertTo-Json devuelve un solo objeto, asegurarse de lista
+    if isinstance(disk, dict):
+        disk = [disk]
+        
     return {
         "disk": disk,
         "memory": mem,
@@ -60,7 +69,6 @@ def get_system_resources(session: winrm.Session):
     }
 
 def get_critical_services_status(session: winrm.Session, service_names):
-    print("Collecting critical services status...")
     if not service_names:
         return []
 
@@ -76,12 +84,12 @@ def get_critical_services_status(session: winrm.Session, service_names):
     if isinstance(services, dict):
         services = [services]
     
-     # Imprimir la variable 'services' (forma cruda y en JSON legible)
-    print("services (raw):", services)
-    try:
-        print("services (json):", json.dumps(services, indent=2, ensure_ascii=False))
-    except Exception as e:
-        print("No se pudo serializar services a JSON:", e)
+    # Imprimir la variable 'services' (forma cruda y en JSON legible)
+    # print("services (raw):", services)
+    # try:
+    #    print("services (json):", json.dumps(services, indent=2, ensure_ascii=False))
+    # except Exception as e:
+    #    print("No se pudo serializar services a JSON:", e)
     
     return services
 
@@ -105,3 +113,280 @@ def get_recent_events(session: winrm.Session, log_name: str, hours: int = 24, ma
 # events_security = get_recent_events(session, "Security", 24, 300)
 # events_system   = get_recent_events(session, "System", 24, 200)
 # events_app      = get_recent_events(session, "Application", 24, 200)
+
+
+def get_security_updates_status(session: winrm.Session):
+    """
+    Obtiene estado de actualizaciones de seguridad.
+    Intenta usar PSWindowsUpdate; si no, hace un fallback a Get-HotFix.
+    Siempre devuelve la misma estructura:
+      {
+        "PendingCount": int | 0,
+        "PendingSecurityCount": int | 0,
+        "PendingTitles": [str],
+        "RecentInstalled": [ { "Date": ..., "Title": ..., "Result": ... } ]
+      }
+    """
+    script = r"""
+    $result = [PSCustomObject]@{
+        PendingCount = 0
+        PendingSecurityCount = 0
+        PendingTitles = @()
+        RecentInstalled = @()
+    }
+
+    try {
+        Import-Module PSWindowsUpdate -ErrorAction Stop | Out-Null
+
+        # Actualizaciones pendientes (no instaladas)
+        $pending = Get-WindowsUpdate -MicrosoftUpdate -Criteria "IsInstalled=0 and Type='Software'" -ErrorAction SilentlyContinue
+
+        if ($pending) {
+            $result.PendingCount = ($pending | Measure-Object).Count
+            $result.PendingSecurityCount = ($pending | Where-Object { $_.Title -like '*Security*' } | Measure-Object).Count
+            $result.PendingTitles = $pending | Select-Object -ExpandProperty Title
+        }
+
+        # Historial reciente
+        $hist = Get-WUHistory | Sort-Object Date -Descending | Select-Object -First 20
+        if ($hist) {
+            $result.RecentInstalled = $hist | Select-Object Date, Title, Result
+        }
+    }
+    catch {
+        # Fallback: usar Get-HotFix si PSWindowsUpdate no está disponible
+        try {
+            $hotfixes = Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 20
+            if ($hotfixes) {
+                # No sabemos cuántas pendientes, así que lo dejamos en 0 y RecentInstalled se llena
+                $result.RecentInstalled = @()
+                foreach ($hf in $hotfixes) {
+                    $result.RecentInstalled += [PSCustomObject]@{
+                        Date = $hf.InstalledOn
+                        Title = "$($hf.HotFixID) - $($hf.Description)"
+                        Result = "Installed"
+                    }
+                }
+            }
+        } catch {
+            # Si también falla, dejamos los valores por defecto
+        }
+    }
+
+    $result | ConvertTo-Json -Depth 4
+    """
+
+    data = _run_ps_json(session, script)
+    if data is None:
+        data = {
+            "PendingCount": 0,
+            "PendingSecurityCount": 0,
+            "PendingTitles": [],
+            "RecentInstalled": []
+        }
+
+    # Normalización mínima
+    if data.get("PendingCount") is None:
+        data["PendingCount"] = 0
+    if data.get("PendingSecurityCount") is None:
+        data["PendingSecurityCount"] = 0
+
+    pt = data.get("PendingTitles")
+    if isinstance(pt, dict):
+        data["PendingTitles"] = [pt]
+    elif pt is None:
+        data["PendingTitles"] = []
+
+    ri = data.get("RecentInstalled")
+    if isinstance(ri, dict):
+        data["RecentInstalled"] = [ri]
+    elif ri is None:
+        data["RecentInstalled"] = []
+
+    return data
+
+
+def get_active_connections(session: winrm.Session, max_results: int = 200):
+    """
+    Obtiene conexiones TCP activas.
+    """
+    script = rf"""
+    try {{
+        Get-NetTCPConnection |
+        Select-Object LocalAddress, LocalPort, RemoteAddress, RemotePort, State, OwningProcess |
+        Select-Object -First {max_results} |
+        ConvertTo-Json -Depth 3
+    }}
+    catch {{
+        # Para OS más antiguos sin Get-NetTCPConnection, usar netstat
+        netstat -ano | Select-Object -First {max_results} | ForEach-Object {{
+            $_
+        }} | ConvertTo-Json -Depth 3
+    }}
+    """
+    conns = _run_ps_json(session, script)
+    if conns is None:
+        return []
+    if isinstance(conns, dict):
+        conns = [conns]
+    return conns
+
+
+def get_critical_events_summary(session: winrm.Session, hours: int = 24, max_events_per_log: int = 100):
+    """
+    Resumen de eventos 'Error' y 'Critical' en System, Application y Security.
+    """
+    logs = ["System", "Application", "Security"]
+    summary = {}
+    since = (datetime.utcnow() - timedelta(hours=hours)).strftime('%Y-%m-%dT%H:%M:%S')
+
+    for log in logs:
+        script = rf"""
+        Get-WinEvent -LogName '{log}' -MaxEvents {max_events_per_log} |
+        Where-Object {{ $_.TimeCreated -gt [datetime]'{since}' -and ($_.LevelDisplayName -eq 'Error' -or $_.LevelDisplayName -eq 'Critical') }} |
+        Select-Object TimeCreated, Id, LevelDisplayName, ProviderName, Message |
+        ConvertTo-Json -Depth 3
+        """
+        events = _run_ps_json(session, script)
+        if events is None:
+            events = []
+        if isinstance(events, dict):
+            events = [events]
+
+        summary[log] = {
+            "count": len(events),
+            "samples": events[:10]  # primeros 10 para reporte
+        }
+
+    return summary
+
+def get_paths_size(session: winrm.Session, paths):
+    """
+    Devuelve tamaño total (GB) por ruta de log.
+    """
+    if not paths:
+        return {}
+
+    # Sanitizar rutas en PowerShell
+    ps_paths = ",".join([f"'{p}'" for p in paths])
+
+    script = rf"""
+    $result = @()
+
+    foreach ($path in @({ps_paths})) {{
+        if (Test-Path $path) {{
+            $bytes = (Get-ChildItem -Path $path -Recurse -ErrorAction SilentlyContinue |
+                      Measure-Object -Property Length -Sum).Sum
+            if (-not $bytes) {{ $bytes = 0 }}
+            $sizeGB = [math]::Round($bytes/1GB, 3)
+        }} else {{
+            $sizeGB = $null
+        }}
+        $result += [PSCustomObject]@{{
+            Path = $path
+            SizeGB = $sizeGB
+        }}
+    }}
+
+    $result | ConvertTo-Json -Depth 3
+    """
+
+    sizes = _run_ps_json(session, script)
+    if sizes is None:
+        return {}
+    if isinstance(sizes, dict):
+        sizes = [sizes]
+
+    out = {}
+    for item in sizes:
+        p = item.get("Path")
+        sz = item.get("SizeGB")
+        out[p] = sz
+    return out
+
+def get_unsigned_or_invalid_binaries(session: winrm.Session, check_processes: bool = True, max_items: int = 200):
+    """
+    Busca binarios asociados a servicios y (opcionalmente) procesos,
+    y devuelve aquellos sin firma digital o con firma inválida.
+
+    IMPORTANTE: esto puede ser pesado en servidores muy cargados.
+    Por eso se limita el número de ítems y la info que se devuelve.
+    """
+    script = rf"""
+    $result = @()
+
+    # 1) Servicios
+    try {{
+        $services = Get-WmiObject Win32_Service | Select-Object Name, DisplayName, PathName | Select-Object -First {max_items}
+        foreach ($svc in $services) {{
+            $path = $svc.PathName
+            if (-not [string]::IsNullOrWhiteSpace($path)) {{
+                # limpiar comillas y argumentos, nos quedamos con el exe
+                $clean = $path.Split('"') | Where-Object {{ $_ -like '*.exe' -or $_ -like '*.dll' -or $_ -like '*.sys' }} | Select-Object -First 1
+                if (-not $clean) {{
+                    $clean = $path.Split(' ')[0]
+                }}
+                $clean = $clean.Trim()
+
+                if (Test-Path $clean) {{
+                    $sig = Get-AuthenticodeSignature -FilePath $clean -ErrorAction SilentlyContinue
+                    $status = $sig.Status
+                    $subject = $sig.SignerCertificate.Subject
+                    $issuer = $sig.SignerCertificate.Issuer
+
+                    if ($status -ne 'Valid') {{
+                        $result += [PSCustomObject]@{{
+                            Type = 'Service'
+                            Name = $svc.Name
+                            DisplayName = $svc.DisplayName
+                            Path = $clean
+                            SignatureStatus = $status
+                            CertSubject = $subject
+                            CertIssuer = $issuer
+                        }}
+                    }}
+                }}
+            }}
+        }}
+    }} catch {{ }}
+
+    # 2) Procesos
+    if ({'true' if check_processes else 'false'}) {{
+        try {{
+            $procs = Get-Process | Select-Object Name, Id, Path | Where-Object {{ $_.Path }} | Select-Object -First {max_items}
+            foreach ($p in $procs) {{
+                $path = $p.Path
+                if (Test-Path $path) {{
+                    $sig = Get-AuthenticodeSignature -FilePath $path -ErrorAction SilentlyContinue
+                    $status = $sig.Status
+                    $subject = $sig.SignerCertificate.Subject
+                    $issuer = $sig.SignerCertificate.Issuer
+
+                    if ($status -ne 'Valid') {{
+                        $result += [PSCustomObject]@{{
+                            Type = 'Process'
+                            Name = $p.Name
+                            DisplayName = $null
+                            Path = $path
+                            Pid = $p.Id
+                            SignatureStatus = $status
+                            CertSubject = $subject
+                            CertIssuer = $issuer
+                        }}
+                    }}
+                }}
+            }}
+        }} catch {{ }}
+    }}
+
+    $result | ConvertTo-Json -Depth 4
+    """
+
+    data = _run_ps_json(session, script)
+    if data is None:
+        return []
+
+    if isinstance(data, dict):
+        data = [data]
+
+    return data

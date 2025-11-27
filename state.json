@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "PITU": {
+      "log_sizes": {
+        "C:\\Windows\\System32\\winevt\\Logs": 0.373,
+        "C:\\inetpub\\logs\\LogFiles": null
+      }
+    }
+  },
+  "last_updated": "2025-11-27T21:41:01.490785"
+}
