@@ -76,11 +76,24 @@ def build_html_report(servers_data):
             html += "</table>"
 
             if upd.get("PendingTitles"):
+                titles = upd.get("PendingTitles") or []
+
+                if isinstance(titles, str):
+                    titles = [titles]
+
                 html += "<h4>Listado de actualizaciones pendientes</h4>"
                 html += "<ul>"
-                for t in upd["PendingTitles"]:
-                    html += f"<li>{t}</li>"
+                for t in titles:
+                    # Normaliza espacios y quita saltos de línea raros
+                    limpio = " ".join((t or "").split())
+                    html += f"<li>{limpio}</li>"
                 html += "</ul>"
+
+                # html += "<h4>Listado de actualizaciones pendientes</h4>"
+                # html += "<ul>"
+                # for t in upd["PendingTitles"]:
+                #    html += f"<li>{t}</li>"
+                # html += "</ul>"
 
         # Autenticaciones
         login_summary = s.get("logons", {})
