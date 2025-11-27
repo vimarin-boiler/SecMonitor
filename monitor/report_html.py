@@ -11,8 +11,9 @@ def build_html_report(servers_data):
         h1 {{ background-color: #003366; color: white; padding: 10px; }}
         h2 {{ color: #003366; border-bottom: 1px solid #ccc; margin-top: 30px; }}
         h3 {{ color: #003366; }}
+        h4 {{ color: #003366; }}
         table {{ border-collapse: collapse; width: 100%; margin-bottom: 20px; }}
-        th, td {{ border: 1px solid #ddd; padding: 6px; text-align: left; }}
+        th, td {{ border: 1px solid #ddd; padding: 6px; text-align: left; vertical-align: top; }}
         th {{ background-color: #f2f2f2; }}
         .ok {{ color: green; font-weight: bold; }}
         .warning {{ color: #e69138; font-weight: bold; }}
@@ -29,7 +30,7 @@ def build_html_report(servers_data):
         name = s["name"]
         html += f"<h2>Servidor: {name}</h2>"
 
-        # Estado general de recursos
+        # Resumen de recursos
         eval_res = s.get("resources_eval", {})
         cpu_class = eval_res.get("cpu_status", "ok")
         mem_class = eval_res.get("mem_status", "ok")
@@ -44,19 +45,10 @@ def build_html_report(servers_data):
         # Discos
         res = s.get("resources", {})
         disk = res.get("disk", [])
-
-        # Normalizar: si llega un dict, envolver en lista
-        if isinstance(disk, dict):
-            disk = [disk]
-
         html += "<h3>Discos</h3>"
         html += "<table><tr><th>Disco</th><th>Tamaño (GB)</th><th>Libre (GB)</th><th>Alerta</th></tr>"
         warning_disks = {d["DeviceID"]: d["FreeGB"] for d in eval_res.get("disk_warnings", [])}
-
         for d in disk:
-            # Saltar cualquier cosa que no sea dict (por seguridad)
-            if not isinstance(d, dict):
-                continue
             dev = d.get("DeviceID")
             size = d.get("SizeGB")
             free = d.get("FreeGB")
@@ -68,6 +60,27 @@ def build_html_report(servers_data):
                 alert = ""
             html += f"<tr><td>{dev}</td><td>{size}</td><td>{free}</td><td class='{cls}'>{alert}</td></tr>"
         html += "</table>"
+
+        # Actualizaciones de seguridad
+        upd = s.get("updates", {})
+        html += "<h3>Actualizaciones de Seguridad</h3>"
+        pending = upd.get("PendingCount")
+        pending_sec = upd.get("PendingSecurityCount")
+        if pending is None:
+            html += "<p class='small'>No se pudo determinar el estado de las actualizaciones (módulo PSWindowsUpdate no disponible o error).</p>"
+        else:
+            cls = "ok" if pending == 0 else "warning"
+            html += "<table>"
+            html += f"<tr><th>Actualizaciones pendientes</th><td class='{cls}'>{pending}</td></tr>"
+            html += f"<tr><th>Actualizaciones de seguridad pendientes</th><td class='{cls}'>{pending_sec}</td></tr>"
+            html += "</table>"
+
+            if upd.get("PendingTitles"):
+                html += "<h4>Listado de actualizaciones pendientes</h4>"
+                html += "<ul>"
+                for t in upd["PendingTitles"]:
+                    html += f"<li>{t}</li>"
+                html += "</ul>"
 
         # Autenticaciones
         login_summary = s.get("logons", {})
@@ -103,6 +116,30 @@ def build_html_report(servers_data):
         else:
             html += "<p class='small'>No se definieron servicios críticos o no se pudo obtener la información.</p>"
 
+        # Conexiones activas
+        conn_sum = s.get("connections_summary", {})
+        html += "<h3>Conexiones Activas</h3>"
+        html += "<table>"
+        html += f"<tr><th>Total conexiones TCP</th><td>{conn_sum.get('total', 0)}</td></tr>"
+        html += "</table>"
+
+        by_state = conn_sum.get("by_state", {})
+        if by_state:
+            html += "<h4>Conexiones por estado</h4>"
+            html += "<table><tr><th>Estado</th><th>Cantidad</th></tr>"
+            for state, count in by_state.items():
+                html += f"<tr><td>{state}</td><td>{count}</td></tr>"
+            html += "</table>"
+
+        # Eventos críticos
+        crit_summary = s.get("critical_events_summary", {})
+        html += "<h3>Eventos Críticos (últimas 24 horas)</h3>"
+        html += "<table><tr><th>Log</th><th>Cantidad de eventos Error/Critical</th></tr>"
+        per_log = crit_summary.get("per_log", {})
+        for log_name, count in per_log.items():
+            cls = "ok" if count == 0 else "warning"
+            html += f"<tr><td>{log_name}</td><td class='{cls}'>{count}</td></tr>"
+        html += "</table>"
+
     html += "</body></html>"
     return html
-

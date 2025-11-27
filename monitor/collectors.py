@@ -1,4 +1,5 @@
 import winrm
+from monitor.analyzers import normalize_field
 from datetime import datetime, timedelta
 import json
 
@@ -12,7 +13,7 @@ def create_session(host: str, username: str, password: str) -> winrm.Session:
     )
 
 def _run_ps_json(session: winrm.Session, script: str):
-    print (f"Running PowerShell script:\n{script}")
+    # print (f"Running PowerShell script:\n{script}")
     result = session.run_ps(script)
     if result.status_code != 0:
         # Podrías loggear result.std_err aquí
@@ -53,6 +54,14 @@ def get_system_resources(session: winrm.Session):
     mem = _run_ps_json(session, mem_script) or {}
     cpu = _run_ps_json(session, cpu_script) or {}
 
+    disk = normalize_field(disk, [])
+    mem  = normalize_field(mem, {})
+    cpu  = normalize_field(cpu, {})
+
+    # Si ConvertTo-Json devuelve un solo objeto, asegurarse de lista
+    if isinstance(disk, dict):
+        disk = [disk]
+        
     return {
         "disk": disk,
         "memory": mem,
@@ -105,3 +114,109 @@ def get_recent_events(session: winrm.Session, log_name: str, hours: int = 24, ma
 # events_security = get_recent_events(session, "Security", 24, 300)
 # events_system   = get_recent_events(session, "System", 24, 200)
 # events_app      = get_recent_events(session, "Application", 24, 200)
+
+
+def get_security_updates_status(session: winrm.Session):
+    """
+    Intenta usar el módulo PSWindowsUpdate para obtener actualizaciones pendientes.
+    Necesita que el módulo esté instalado en el servidor.
+    Si no se puede, devuelve estructura básica.
+    """
+    script = r"""
+    try {
+        Import-Module PSWindowsUpdate -ErrorAction Stop | Out-Null
+
+        $pending = Get-WindowsUpdate -MicrosoftUpdate -Criteria "IsInstalled=0 and Type='Software'" -ErrorAction SilentlyContinue
+        $installed = Get-WUHistory | Select-Object -First 20
+
+        $result = [PSCustomObject]@{
+            PendingCount = ($pending | Measure-Object).Count
+            PendingSecurityCount = ($pending | Where-Object { $_.Title -like '*Security*' } | Measure-Object).Count
+            PendingTitles = ($pending | Select-Object -ExpandProperty Title)
+            RecentInstalled = $installed | Select-Object Date, Title, Result
+        }
+
+        $result | ConvertTo-Json -Depth 4
+    }
+    catch {
+        # Fallback muy simple: intentamos Get-HotFix para al menos mostrar algo
+        $hotfixes = Get-HotFix | Select-Object -Last 20
+        $result = [PSCustomObject]@{
+            PendingCount = $null
+            PendingSecurityCount = $null
+            PendingTitles = @()
+            RecentInstalled = $hotfixes | Select-Object InstalledOn, Description, HotFixID
+        }
+        $result | ConvertTo-Json -Depth 4
+    }
+    """
+
+    data = _run_ps_json(session, script)
+    if data is None:
+        data = {
+            "PendingCount": None,
+            "PendingSecurityCount": None,
+            "PendingTitles": [],
+            "RecentInstalled": []
+        }
+    # normalizar arrays
+    if isinstance(data.get("PendingTitles"), dict):
+        data["PendingTitles"] = [data["PendingTitles"]]
+    if isinstance(data.get("RecentInstalled"), dict):
+        data["RecentInstalled"] = [data["RecentInstalled"]]
+    return data
+
+
+def get_active_connections(session: winrm.Session, max_results: int = 200):
+    """
+    Obtiene conexiones TCP activas.
+    """
+    script = rf"""
+    try {{
+        Get-NetTCPConnection |
+        Select-Object LocalAddress, LocalPort, RemoteAddress, RemotePort, State, OwningProcess |
+        Select-Object -First {max_results} |
+        ConvertTo-Json -Depth 3
+    }}
+    catch {{
+        # Para OS más antiguos sin Get-NetTCPConnection, usar netstat
+        netstat -ano | Select-Object -First {max_results} | ForEach-Object {{
+            $_
+        }} | ConvertTo-Json -Depth 3
+    }}
+    """
+    conns = _run_ps_json(session, script)
+    if conns is None:
+        return []
+    if isinstance(conns, dict):
+        conns = [conns]
+    return conns
+
+
+def get_critical_events_summary(session: winrm.Session, hours: int = 24, max_events_per_log: int = 100):
+    """
+    Resumen de eventos 'Error' y 'Critical' en System, Application y Security.
+    """
+    logs = ["System", "Application", "Security"]
+    summary = {}
+    since = (datetime.utcnow() - timedelta(hours=hours)).strftime('%Y-%m-%dT%H:%M:%S')
+
+    for log in logs:
+        script = rf"""
+        Get-WinEvent -LogName '{log}' -MaxEvents {max_events_per_log} |
+        Where-Object {{ $_.TimeCreated -gt [datetime]'{since}' -and ($_.LevelDisplayName -eq 'Error' -or $_.LevelDisplayName -eq 'Critical') }} |
+        Select-Object TimeCreated, Id, LevelDisplayName, ProviderName, Message |
+        ConvertTo-Json -Depth 3
+        """
+        events = _run_ps_json(session, script)
+        if events is None:
+            events = []
+        if isinstance(events, dict):
+            events = [events]
+
+        summary[log] = {
+            "count": len(events),
+            "samples": events[:10]  # primeros 10 para reporte
+        }
+
+    return summary

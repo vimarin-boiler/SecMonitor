@@ -4,13 +4,15 @@ from monitor.collectors import (
     get_system_resources,
     get_critical_services_status,
     get_recent_events,
+    get_security_updates_status,
+    get_active_connections,
+    get_critical_events_summary,
 )
-from monitor.analyzers import summarize_logons, evaluate_resources
+from monitor.analyzers import summarize_logons, evaluate_resources, summarize_connections, summarize_critical_events
 from monitor.report_html import build_html_report
 from monitor.mailer import send_html_email
 
 def run_daily_monitor():
-    print("Cargando configuración:")
     config = load_config()
     smtp_conf = config["Smtp"]
     servers_conf = config["Servers"]
@@ -27,42 +29,54 @@ def run_daily_monitor():
                 username=s["Username"],
                 password=s["Password"]
             )
-            print(f"Sesión creada para {name}")
-            print("Ejecutando get_system_resources...")
+
+            # Recursos
             resources = get_system_resources(session)
+            res_eval = evaluate_resources(resources, thresholds)
 
-            print("Ejecutando get_recent_events...")
+            # Eventos de seguridad y logons
             events_sec = get_recent_events(session, "Security", 24, 300)
-
-            print("Resumiendo summarize_logons...")
             logons = summarize_logons(events_sec)
 
-            print("Ejecutando get_critical_services_status...")
+            # Servicios críticos
             services = get_critical_services_status(session, s.get("CriticalServices", []))
 
-            print("Evaluando recursos con evaluate_resources...")
-            print("TYPE resources:", type(resources))
-            print("TYPE thresholds:", type(thresholds))
+            # Actualizaciones
+            updates = get_security_updates_status(session)
 
-            res_eval = evaluate_resources(resources, thresholds)
+            # Conexiones activas
+            connections = get_active_connections(session, max_results=200)
+            conn_summary = summarize_connections(connections)
+
+            # Eventos críticos (System/Application/Security)
+            crit_raw = get_critical_events_summary(session, hours=24, max_events_per_log=200)
+            crit_summary = summarize_critical_events(crit_raw)
 
             server_data = {
                 "name": name,
                 "resources": resources,
+                "resources_eval": res_eval,
                 "logons": logons,
                 "services": services,
-                "resources_eval": res_eval,
+                "updates": updates,
+                "connections_summary": conn_summary,
+                "critical_events_raw": crit_raw,          # por si luego quieres detallar más
+                "critical_events_summary": crit_summary,  # para el reporte
             }
             all_data.append(server_data)
+
         except Exception as ex:
-            # Si un servidor falla, lo agregamos igual con error
             print(f"Error monitoreando {name}: {ex}")
             all_data.append({
                 "name": name,
                 "resources": {},
+                "resources_eval": {"cpu_status": "critical", "mem_status": "critical", "disk_warnings": []},
                 "logons": {"logons_ok_count": 0, "logons_fail_count": 0, "logons_fail_samples": []},
                 "services": [],
-                "resources_eval": {"cpu_status": "critical", "mem_status": "critical", "disk_warnings": []},
+                "updates": {"PendingCount": None, "PendingSecurityCount": None, "PendingTitles": [], "RecentInstalled": []},
+                "connections_summary": {"total": 0, "by_state": {}},
+                "critical_events_raw": {},
+                "critical_events_summary": {"total": 0, "per_log": {}},
             })
 
     html = build_html_report(all_data)
@@ -75,4 +89,5 @@ def run_daily_monitor():
 
 if __name__ == "__main__":
     run_daily_monitor()
+
 

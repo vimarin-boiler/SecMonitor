@@ -60,4 +60,34 @@ def evaluate_resources(resources, thresholds):
     }
 
 
+def summarize_connections(connections):
+    """
+    Pequeño resumen: cantidad total y por estado (Established, Listen, etc.).
+    """
+    total = len(connections or [])
+    per_state = {}
+    for c in connections or []:
+        state = c.get("State", "Unknown")
+        per_state[state] = per_state.get(state, 0) + 1
+
+    return {
+        "total": total,
+        "by_state": per_state
+    }
+
+
+def summarize_critical_events(crit_summary):
+    """
+    Recibe el dict de get_critical_events_summary y solo normaliza la estructura.
+    """
+    total = 0
+    per_log = {}
+    for log, data in (crit_summary or {}).items():
+        c = data.get("count", 0)
+        total += c
+        per_log[log] = c
+    return {
+        "total": total,
+        "per_log": per_log
+    }
 

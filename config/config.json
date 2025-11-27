@@ -13,7 +13,7 @@
       "Host": "10.192.10.9",
       "Username": "PITU\\monitor",
       "Password": "monitor",
-      "CriticalServices": ["MSSQLSERVER", "W3SVC", "BrokerInfrastructure"]
+      "CriticalServices": ["MSSQLSERVER", "W3SVC", "BrokerInfrastructure","VaultSvc"]
     }
   ],
   "Thresholds": {
