@@ -157,6 +157,7 @@ def run_daily_monitor():
 
 if __name__ == "__main__":
     run_daily_monitor()
+    print("Monitoreo diario completado.")
 
 
 
