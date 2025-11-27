@@ -13,12 +13,20 @@
       "Host": "10.192.10.9",
       "Username": "PITU\\monitor",
       "Password": "monitor",
-      "CriticalServices": ["MSSQLSERVER", "W3SVC", "BrokerInfrastructure","VaultSvc"]
+      "CriticalServices": ["MSSQLSERVER", "W3SVC", "BrokerInfrastructure","VaultSvc"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs","C:\\inetpub\\logs\\LogFiles"]
     }
   ],
   "Thresholds": {
-    "CpuCritical": 90,
+    "CpuCritical": 60,
+    "CpuWarning": 50,
     "RamFreeGBWarning": 2,
-    "DiskFreeGBWarning": 10
+    "RamFreeGBCritical": 1,
+    "DiskFreeGBWarning": 20,
+    "LogGrowthPercentWarning": 50,
+    "LogGrowthGBWarning": 1
+  },
+  "State": {
+    "Path": "state.json"
   }
 }

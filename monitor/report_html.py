@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from datetime import datetime
+
 def build_html_report(servers_data):
     date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     html = f"""
@@ -26,6 +28,23 @@ def build_html_report(servers_data):
       <p class="small">Generado automáticamente por el monitor de servidores Windows.</p>
     """
 
+    # Resumen ejecutivo global
+    html += "<h2>Resumen Ejecutivo Global</h2>"
+    html += "<table><tr><th>Servidor</th><th>Nivel</th><th>Score</th><th>Comentarios</th></tr>"
+    for s in servers_data:
+        risk = s.get("risk", {})
+        level = risk.get("level", "OK")
+        score = risk.get("score", 0)
+        notes = risk.get("notes", [])
+        cls = "ok"
+        if level == "WARNING":
+            cls = "warning"
+        elif level == "CRITICAL":
+            cls = "critical"
+        html += f"<tr><td>{s['name']}</td><td class='{cls}'>{level}</td><td>{score}</td><td>{'; '.join(notes)}</td></tr>"
+    html += "</table>"
+
+    # Detalle por servidor
     for s in servers_data:
         name = s["name"]
         html += f"<h2>Servidor: {name}</h2>"
@@ -76,24 +95,11 @@ def build_html_report(servers_data):
             html += "</table>"
 
             if upd.get("PendingTitles"):
-                titles = upd.get("PendingTitles") or []
-
-                if isinstance(titles, str):
-                    titles = [titles]
-
                 html += "<h4>Listado de actualizaciones pendientes</h4>"
                 html += "<ul>"
-                for t in titles:
-                    # Normaliza espacios y quita saltos de línea raros
-                    limpio = " ".join((t or "").split())
-                    html += f"<li>{limpio}</li>"
+                for t in upd["PendingTitles"]:
+                    html += f"<li>{t}</li>"
                 html += "</ul>"
-
-                # html += "<h4>Listado de actualizaciones pendientes</h4>"
-                # html += "<ul>"
-                # for t in upd["PendingTitles"]:
-                #    html += f"<li>{t}</li>"
-                # html += "</ul>"
 
         # Autenticaciones
         login_summary = s.get("logons", {})
@@ -154,5 +160,21 @@ def build_html_report(servers_data):
             html += f"<tr><td>{log_name}</td><td class='{cls}'>{count}</td></tr>"
         html += "</table>"
 
+        # Crecimiento de logs
+        log_growth = s.get("log_growth", {})
+        html += "<h3>Crecimiento de Logs / Archivos de Sistema</h3>"
+        details = log_growth.get("details", [])
+        if not details:
+            html += "<p class='small'>No hay datos previos para comparar (primer día de ejecución o sin baseline).</p>"
+        else:
+            html += "<table><tr><th>Ruta</th><th>Tamaño anterior (GB)</th><th>Tamaño actual (GB)</th><th>Diferencia (GB)</th><th>Diferencia (%)</th><th>Estado</th></tr>"
+            for item in details:
+                cls = "ok"
+                if item.get("Status") == "warning":
+                    cls = "warning"
+                html += f"<tr><td>{item.get('Path')}</td><td>{item.get('PrevGB')}</td><td>{item.get('CurrGB')}</td><td>{item.get('DiffGB')}</td><td>{item.get('DiffPercent')}</td><td class='{cls}'>{item.get('Status')}</td></tr>"
+            html += "</table>"
+
     html += "</body></html>"
     return html
+

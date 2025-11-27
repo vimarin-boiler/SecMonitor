@@ -220,3 +220,47 @@ def get_critical_events_summary(session: winrm.Session, hours: int = 24, max_eve
         }
 
     return summary
+
+def get_paths_size(session: winrm.Session, paths):
+    """
+    Devuelve tamaño total (GB) por ruta de log.
+    """
+    if not paths:
+        return {}
+
+    # Sanitizar rutas en PowerShell
+    ps_paths = ",".join([f"'{p}'" for p in paths])
+
+    script = rf"""
+    $result = @()
+
+    foreach ($path in @({ps_paths})) {{
+        if (Test-Path $path) {{
+            $bytes = (Get-ChildItem -Path $path -Recurse -ErrorAction SilentlyContinue |
+                      Measure-Object -Property Length -Sum).Sum
+            if (-not $bytes) {{ $bytes = 0 }}
+            $sizeGB = [math]::Round($bytes/1GB, 3)
+        }} else {{
+            $sizeGB = $null
+        }}
+        $result += [PSCustomObject]@{{
+            Path = $path
+            SizeGB = $sizeGB
+        }}
+    }}
+
+    $result | ConvertTo-Json -Depth 3
+    """
+
+    sizes = _run_ps_json(session, script)
+    if sizes is None:
+        return {}
+    if isinstance(sizes, dict):
+        sizes = [sizes]
+
+    out = {}
+    for item in sizes:
+        p = item.get("Path")
+        sz = item.get("SizeGB")
+        out[p] = sz
+    return out
