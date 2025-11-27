@@ -60,6 +60,21 @@ def evaluate_resources(resources, thresholds):
     }
 
 
+TCP_STATE_MAP = {
+    1: "Closed",
+    2: "Listen",
+    3: "SynSent",
+    4: "SynReceived",
+    5: "Established",
+    6: "FinWait1",
+    7: "FinWait2",
+    8: "CloseWait",
+    9: "Closing",
+    10: "LastAck",
+    11: "TimeWait",
+    12: "DeleteTCB",
+}
+
 def summarize_connections(connections):
     """
     Pequeño resumen: cantidad total y por estado (Established, Listen, etc.).
@@ -68,8 +83,10 @@ def summarize_connections(connections):
     per_state = {}
     for c in connections or []:
         state = c.get("State", "Unknown")
+        if isinstance(state, (int, float)):
+            state = TCP_STATE_MAP.get(int(state), str(state))
         per_state[state] = per_state.get(state, 0) + 1
-
+        
     return {
         "total": total,
         "by_state": per_state
@@ -217,6 +234,20 @@ def compute_risk_score(server: dict):
         score += 10
         notes.append("Crecimiento inusual en logs o archivos de sistema.")
 
+    # Binarios sin firma o con firma inválida
+    unsigned = server.get("unsigned_binaries", [])
+    if unsigned:
+        count = len(unsigned)
+        if count > 50:
+            score += 25
+            notes.append(f"Más de 50 binarios sin firma o con firma inválida ({count}).")
+        elif count > 10:
+            score += 15
+            notes.append(f"Más de 10 binarios sin firma o con firma inválida ({count}).")
+        else:
+            score += 10
+            notes.append(f"Se detectaron binarios sin firma o con firma inválida ({count}).")
+            
     # Limitar score
     if score > 100:
         score = 100
