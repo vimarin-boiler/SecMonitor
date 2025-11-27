@@ -1,3 +1,5 @@
+import json
+
 def summarize_logons(security_events):
     logons_ok = [e for e in security_events if e.get("Id") == 4624]
     logons_fail = [e for e in security_events if e.get("Id") == 4625]
@@ -7,11 +9,29 @@ def summarize_logons(security_events):
         "logons_fail_count": len(logons_fail),
         "logons_fail_samples": logons_fail[:10],
     }
+def normalize_field(value, default):
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except:
+            return default
+    return value
 
 def evaluate_resources(resources, thresholds):
-    cpu = resources.get("cpu", {}).get("CPUPercent", 0) or 0
-    mem_free = resources.get("memory", {}).get("FreeGB", 0) or 0
-    disks = resources.get("disk", []) or []
+    cpu_info = resources.get("cpu", {})
+    if not isinstance(cpu_info, dict):
+        cpu_info = {}
+
+    mem_info = resources.get("memory", {})
+    if not isinstance(mem_info, dict):
+        mem_info = {}
+
+    disks = resources.get("disk", [])
+    if not isinstance(disks, list):
+        disks = []
+
+    cpu = cpu_info.get("CPUPercent", 0)
+    mem_free = mem_info.get("FreeGB", 0)
 
     cpu_status = "ok"
     if cpu >= thresholds.get("CpuCritical", 90):
@@ -21,12 +41,9 @@ def evaluate_resources(resources, thresholds):
 
     disk_warnings = []
     for d in disks:
-        free = d.get("FreeGB", 0) or 0
+        free = d.get("FreeGB", 0)
         if free <= thresholds.get("DiskFreeGBWarning", 10):
-            disk_warnings.append({
-                "DeviceID": d.get("DeviceID"),
-                "FreeGB": free
-            })
+            disk_warnings.append({"DeviceID": d.get("DeviceID"), "FreeGB": free})
 
     mem_status = "ok"
     if mem_free <= thresholds.get("RamFreeGBCritical", 1):
@@ -41,5 +58,6 @@ def evaluate_resources(resources, thresholds):
         "mem_free_gb": mem_free,
         "disk_warnings": disk_warnings,
     }
+
 
 

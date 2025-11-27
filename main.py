@@ -27,11 +27,23 @@ def run_daily_monitor():
                 username=s["Username"],
                 password=s["Password"]
             )
-
+            print(f"Sesión creada para {name}")
+            print("Ejecutando get_system_resources...")
             resources = get_system_resources(session)
+
+            print("Ejecutando get_recent_events...")
             events_sec = get_recent_events(session, "Security", 24, 300)
+
+            print("Resumiendo summarize_logons...")
             logons = summarize_logons(events_sec)
+
+            print("Ejecutando get_critical_services_status...")
             services = get_critical_services_status(session, s.get("CriticalServices", []))
+
+            print("Evaluando recursos con evaluate_resources...")
+            print("TYPE resources:", type(resources))
+            print("TYPE thresholds:", type(thresholds))
+
             res_eval = evaluate_resources(resources, thresholds)
 
             server_data = {

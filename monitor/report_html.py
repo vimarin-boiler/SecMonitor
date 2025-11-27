@@ -44,10 +44,19 @@ def build_html_report(servers_data):
         # Discos
         res = s.get("resources", {})
         disk = res.get("disk", [])
+
+        # Normalizar: si llega un dict, envolver en lista
+        if isinstance(disk, dict):
+            disk = [disk]
+
         html += "<h3>Discos</h3>"
         html += "<table><tr><th>Disco</th><th>Tamaño (GB)</th><th>Libre (GB)</th><th>Alerta</th></tr>"
         warning_disks = {d["DeviceID"]: d["FreeGB"] for d in eval_res.get("disk_warnings", [])}
+
         for d in disk:
+            # Saltar cualquier cosa que no sea dict (por seguridad)
+            if not isinstance(d, dict):
+                continue
             dev = d.get("DeviceID")
             size = d.get("SizeGB")
             free = d.get("FreeGB")

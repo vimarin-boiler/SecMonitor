@@ -4,6 +4,7 @@ import json
 
 def create_session(host: str, username: str, password: str) -> winrm.Session:
     # Para dev en Windows y prod en Linux, WinRM funciona igual si tienes conectividad y credenciales
+    print (f"Creating WinRM session to {host} with user {username}")
     return winrm.Session(
         target=host,
         auth=(username, password),
@@ -11,7 +12,7 @@ def create_session(host: str, username: str, password: str) -> winrm.Session:
     )
 
 def _run_ps_json(session: winrm.Session, script: str):
-    """Ejecuta PowerShell y devuelve JSON parseado o valor por defecto."""
+    print (f"Running PowerShell script:\n{script}")
     result = session.run_ps(script)
     if result.status_code != 0:
         # Podrías loggear result.std_err aquí
@@ -47,6 +48,7 @@ def get_system_resources(session: winrm.Session):
     [PSCustomObject]@{ CPUPercent = $val } | ConvertTo-Json
     """
 
+    print("Collecting system resources...")
     disk = _run_ps_json(session, disk_script) or []
     mem = _run_ps_json(session, mem_script) or {}
     cpu = _run_ps_json(session, cpu_script) or {}
@@ -58,6 +60,7 @@ def get_system_resources(session: winrm.Session):
     }
 
 def get_critical_services_status(session: winrm.Session, service_names):
+    print("Collecting critical services status...")
     if not service_names:
         return []
 
@@ -72,6 +75,14 @@ def get_critical_services_status(session: winrm.Session, service_names):
     # ConvertTo-Json devuelve objeto o lista, normalizamos a lista
     if isinstance(services, dict):
         services = [services]
+    
+     # Imprimir la variable 'services' (forma cruda y en JSON legible)
+    print("services (raw):", services)
+    try:
+        print("services (json):", json.dumps(services, indent=2, ensure_ascii=False))
+    except Exception as e:
+        print("No se pudo serializar services a JSON:", e)
+    
     return services
 
 def get_recent_events(session: winrm.Session, log_name: str, hours: int = 24, max_events: int = 300):
