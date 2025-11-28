@@ -133,7 +133,6 @@ def build_html_report(servers_data):
         html += "</table>"
 
         # ---- Actualizaciones de seguridad ----
-        # ---- Actualizaciones de seguridad ----
         upd = s.get("updates", {})
         html += "<h3>Actualizaciones de Seguridad</h3>"
 
