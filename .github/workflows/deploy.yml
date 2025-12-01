@@ -1,62 +1,25 @@
-name: Deploy app to self-hosted server
+name: Sync code to app folder
 
 on:
   push:
     branches:
-      - main    # o la rama que uses para producción
+      - main    # cambia si usas otra rama
 
 jobs:
   deploy:
-    # Importante: usar el runner self-hosted
-    runs-on: self-hosted
+    runs-on: self-hosted   # usa tu runner en el servidor
 
     env:
-      APP_DIR: $HOME/monitor          # carpeta donde vivirá tu app
-      VENV_DIR: $HOME/monitor/.venv   # venv de la app
-      PYTHON_VERSION: "3.13.9"        # tu versión de Python
+      APP_DIR: /home/boiler/monitor   # <-- ajusta esta ruta
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configurar Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Crear carpeta de la app
+      - name: Crear carpeta de la aplicación
         run: |
           mkdir -p "$APP_DIR"
 
-      - name: Copiar código al directorio de despliegue
+      - name: Copiar código al directorio de la aplicación
         run: |
           rsync -av --delete ./ "$APP_DIR"/
-
-      - name: Crear / actualizar entorno virtual
-        working-directory: ${{ env.APP_DIR }}
-        run: |
-          if [ ! -d "$VENV_DIR" ]; then
-            python -m venv "$VENV_DIR"
-          fi
-          source "$VENV_DIR/bin/activate"
-          pip install --upgrade pip
-          if [ -f "requirements.txt" ]; then
-            pip install -r requirements.txt
-          fi
-
-      - name: Ejecutar tests (opcional)
-        working-directory: ${{ env.APP_DIR }}
-        run: |
-          source "$VENV_DIR/bin/activate"
-          if [ -f "pytest.ini" ] || [ -d "tests" ]; then
-            pytest
-          else
-            echo "No hay tests configurados, saltando..."
-          fi
-
-      - name: Ejecutar aplicación (solo para pruebas manuales)
-        if: false  # ponlo en true si quieres arrancarla desde el pipeline
-        working-directory: ${{ env.APP_DIR }}
-        run: |
-          source "$VENV_DIR/bin/activate"
-          python main.py
