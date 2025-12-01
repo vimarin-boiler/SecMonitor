@@ -10,7 +10,8 @@ jobs:
     runs-on: self-hosted   # usa tu runner en el servidor
 
     env:
-      APP_DIR: /home/boiler/monitor   # <-- ajusta esta ruta
+      APP_DIR: /home/boiler/monitor
+      VENV_DIR: /home/boiler/monitor/.venv
 
     steps:
       - name: Checkout repository
