@@ -23,3 +23,15 @@ jobs:
       - name: Copiar código al directorio de la aplicación
         run: |
           rsync -av --delete ./ "$APP_DIR"/
+      
+      - name: Crear / actualizar entorno virtual
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          if [ ! -d "$VENV_DIR" ]; then
+            python -m venv "$VENV_DIR"
+          fi
+          source "$VENV_DIR/bin/activate"
+          pip install --upgrade pip
+          if [ -f "requirements.txt" ]; then
+            pip install -r requirements.txt
+          fi
