@@ -48,8 +48,6 @@ def get_system_resources(session: winrm.Session):
     $val = [math]::Round($cpu.CounterSamples.CookedValue,2)
     [PSCustomObject]@{ CPUPercent = $val } | ConvertTo-Json
     """
-
-    print("Collecting system resources...")
     disk = _run_ps_json(session, disk_script) or []
     mem = _run_ps_json(session, mem_script) or {}
     cpu = _run_ps_json(session, cpu_script) or {}
