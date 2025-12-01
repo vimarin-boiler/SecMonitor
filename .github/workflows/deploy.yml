@@ -1,0 +1,46 @@
+name: Sync code to app folder
+
+on:
+  push:
+    branches:
+      - main    # cambia si usas otra rama
+
+jobs:
+  deploy:
+    runs-on: self-hosted   # usa tu runner en el servidor
+
+    env:
+      APP_DIR: /home/boiler/monitor
+      VENV_DIR: /home/boiler/monitor/.venv
+      PYTHON_BIN: python3
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Crear carpeta de la aplicación
+        run: |
+          mkdir -p "$APP_DIR"
+
+      - name: Copiar código al directorio de la aplicación
+        run: |
+          rsync -av --delete ./ "$APP_DIR"/
+      - name: Crear / actualizar entorno virtual
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          # Si el venv existe pero está corrupto, lo borramos
+          if [ -d "$VENV_DIR" ] && [ ! -x "$VENV_DIR/bin/python" ]; then
+            rm -rf "$VENV_DIR"
+          fi
+      
+          # Crear venv si no existe
+          if [ ! -d "$VENV_DIR" ]; then
+            $PYTHON_BIN -m venv "$VENV_DIR"
+          fi
+      
+          # Activar venv e instalar dependencias
+          source "$VENV_DIR/bin/activate"
+          python -m pip install --upgrade pip
+          if [ -f "requirements.txt" ]; then
+            python -m pip install -r requirements.txt
+          fi
