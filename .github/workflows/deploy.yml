@@ -12,6 +12,7 @@ jobs:
     env:
       APP_DIR: /home/boiler/monitor
       VENV_DIR: /home/boiler/monitor/.venv
+      PYTHON_BIN: python3
 
     steps:
       - name: Checkout repository
@@ -24,16 +25,22 @@ jobs:
       - name: Copiar código al directorio de la aplicación
         run: |
           rsync -av --delete ./ "$APP_DIR"/
-      - name: Usar entorno virtual existente e instalar dependencias
+      - name: Crear / actualizar entorno virtual
         working-directory: ${{ env.APP_DIR }}
         run: |
-          if [ ! -d "$VENV_DIR" ]; then
-            echo "ERROR: El entorno virtual no existe en $VENV_DIR"
-            exit 1
+          # Si el venv existe pero está corrupto, lo borramos
+          if [ -d "$VENV_DIR" ] && [ ! -x "$VENV_DIR/bin/python" ]; then
+            rm -rf "$VENV_DIR"
           fi
       
+          # Crear venv si no existe
+          if [ ! -d "$VENV_DIR" ]; then
+            $PYTHON_BIN -m venv "$VENV_DIR"
+          fi
+      
+          # Activar venv e instalar dependencias
           source "$VENV_DIR/bin/activate"
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           if [ -f "requirements.txt" ]; then
-            pip install -r requirements.txt
+            python -m pip install -r requirements.txt
           fi
