@@ -9,10 +9,10 @@
   },
   "Servers": [
     {
-      "Name": "PITU",
-      "Host": "10.192.10.9",
-      "Username": "PITU\\monitor",
-      "Password": "monitor",
+      "Name": "ALERCE-II",
+      "Host": "172.18.14.127",
+      "Username": "grupochien\\mauricio.marin.ext",
+      "Password": "T@648271163959ad",
       "CriticalServices": ["MSSQLSERVER", "W3SVC", "BrokerInfrastructure","VaultSvc"],
       "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs","C:\\inetpub\\logs\\LogFiles"]
     }
