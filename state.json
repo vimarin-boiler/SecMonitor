@@ -1,11 +1,84 @@
 {
   "servers": {
-    "PITU": {
+    "ALERCE": {
       "log_sizes": {
-        "C:\\Windows\\System32\\winevt\\Logs": 0.373,
-        "C:\\inetpub\\logs\\LogFiles": null
+        "C:\\Windows\\System32\\winevt\\Logs": 0.577,
+        "C:\\TecPos\\__tecpos_logs": 0.002
+      }
+    },
+    "ALERCE-II": {
+      "log_sizes": {
+        "C:\\Windows\\System32\\winevt\\Logs": 0.46,
+        "C:\\TecPos\\__tecpos_logs": 1.478
+      }
+    },
+    "ALERCE-III": {
+      "log_sizes": {
+        "C:\\Windows\\System32\\winevt\\Logs": 0.454,
+        "C:\\TecPos\\__tecpos_logs": 0.002
+      }
+    },
+    "POS-VIRTUAL": {
+      "log_sizes": {
+        "C:\\Windows\\System32\\winevt\\Logs": 0.571
+      }
+    },
+    "PRINTVTRADEX": {
+      "log_sizes": {
+        "C:\\Windows\\System32\\winevt\\Logs": 0.522
+      }
+    },
+    "BUR-APP01": {
+      "log_sizes": {
+        "C:\\Windows\\System32\\winevt\\Logs": 0.542
+      }
+    },
+    "BUR-APP02": {
+      "log_sizes": {
+        "C:\\Windows\\System32\\winevt\\Logs": 0.562
+      }
+    },
+    "BUR-APP03": {
+      "log_sizes": {
+        "C:\\Windows\\System32\\winevt\\Logs": 0.562
+      }
+    },
+    "BUR-APP04": {
+      "log_sizes": {
+        "C:\\Windows\\System32\\winevt\\Logs": 0.562
+      }
+    },
+    "BUR-MONGO": {
+      "log_sizes": {
+        "C:\\Windows\\System32\\winevt\\Logs": 0.561
+      }
+    },
+    "PVTRADEX2": {
+      "log_sizes": {
+        "C:\\Windows\\System32\\winevt\\Logs": 0.537
+      }
+    },
+    "SINKRO": {
+      "log_sizes": {
+        "C:\\Windows\\System32\\winevt\\Logs": 0.587
+      }
+    },
+    "SRV-LOGISTICA": {
+      "log_sizes": {
+        "C:\\Windows\\System32\\winevt\\Logs": 0.183
+      }
+    },
+    "HCPOS-VIRTUAL": {
+      "log_sizes": {
+        "C:\\Windows\\System32\\winevt\\Logs": 0.559,
+        "C:\\TecPos\\__tecpos_logs": 0.012
+      }
+    },
+    "MARFIL": {
+      "log_sizes": {
+        "C:\\Windows\\System32\\winevt\\Logs": 0.592
       }
     }
   },
-  "last_updated": "2025-11-28T16:15:26.229802"
+  "last_updated": "2025-12-03T20:50:52.956411"
 }

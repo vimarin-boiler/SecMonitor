@@ -3,6 +3,9 @@ from monitor.analyzers import normalize_field
 from datetime import datetime, timedelta
 import json
 
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="winrm")
+
 def create_session(host: str, username: str, password: str) -> winrm.Session:
     # Para dev en Windows y prod en Linux, WinRM funciona igual si tienes conectividad y credenciales
     print (f"Creating WinRM session to {host} with user {username}")
@@ -15,8 +18,11 @@ def create_session(host: str, username: str, password: str) -> winrm.Session:
 def _run_ps_json(session: winrm.Session, script: str):
     # print (f"Running PowerShell script:\n{script}")
     result = session.run_ps(script)
+    # print (f"PowerShell script executed with status code {result.status_code}")
+    # print (f"StdOut: {result.std_out.decode('utf-8', errors='ignore')}")
+
     if result.status_code != 0:
-        # Podrías loggear result.std_err aquí
+        # print(f"PowerShell script failed with status {result.status_code}: {result.std_err.decode('utf-8', errors='ignore')}")
         return None
     out = result.std_out.decode('utf-8', errors='ignore').strip()
     if not out:
@@ -28,6 +34,9 @@ def _run_ps_json(session: winrm.Session, script: str):
 
 def get_system_resources(session: winrm.Session):
     disk_script = r"""
+    $ErrorActionPreference="SilentlyContinue"
+    $WarningPreference="SilentlyContinue"
+
     Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" |
     Select-Object DeviceID,
         @{Name="SizeGB";Expression={[math]::Round($_.Size/1GB,2)}},
@@ -36,6 +45,9 @@ def get_system_resources(session: winrm.Session):
     """
 
     mem_script = r"""
+    $ErrorActionPreference="SilentlyContinue"
+    $WarningPreference="SilentlyContinue"
+
     $os = Get-CimInstance Win32_OperatingSystem
     [PSCustomObject]@{
         TotalGB = [math]::Round($os.TotalVisibleMemorySize/1MB,2)
@@ -44,14 +56,24 @@ def get_system_resources(session: winrm.Session):
     """
 
     cpu_script = r"""
-    $cpu = Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 1 -MaxSamples 1
-    $val = [math]::Round($cpu.CounterSamples.CookedValue,2)
-    [PSCustomObject]@{ CPUPercent = $val } | ConvertTo-Json
+    $ErrorActionPreference="SilentlyContinue"
+    $WarningPreference="SilentlyContinue"
+
+    $cpu = Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average
+    $val = [math]::Round($cpu.Average, 2)
+
+    [PSCustomObject]@{
+        CPUPercent = $val
+    } | ConvertTo-Json
     """
 
-    print("Collecting system resources...")
+    print("    - Obteniendo uso de disco...")
     disk = _run_ps_json(session, disk_script) or []
+
+    print("    - Obteniendo uso de memoria...")
     mem = _run_ps_json(session, mem_script) or {}
+
+    print("    - Obteniendo uso de CPU...")
     cpu = _run_ps_json(session, cpu_script) or {}
 
     disk = normalize_field(disk, [])
@@ -74,8 +96,14 @@ def get_critical_services_status(session: winrm.Session, service_names):
 
     services_str = ",".join([f"'{s}'" for s in service_names])
     script = rf"""
-    Get-Service | Where-Object {{ $_.Name -in @({services_str}) }} |
-    Select-Object Name, DisplayName, Status | ConvertTo-Json
+        Get-Service |
+        Where-Object {{ $_.Name -in @({services_str}) }} |
+        Select-Object Name, DisplayName,
+            @{{
+                Name = 'Status'
+                Expression = {{ $_.Status.ToString() }}
+            }} |
+        ConvertTo-Json
     """
     services = _run_ps_json(session, script)
     if services is None:
@@ -304,6 +332,7 @@ def get_paths_size(session: winrm.Session, paths):
         out[p] = sz
     return out
 
+
 def get_unsigned_or_invalid_binaries(session: winrm.Session, check_processes: bool = True, max_items: int = 200):
     """
     Busca binarios asociados a servicios y (opcionalmente) procesos,
@@ -330,7 +359,7 @@ def get_unsigned_or_invalid_binaries(session: winrm.Session, check_processes: bo
 
                 if (Test-Path $clean) {{
                     $sig = Get-AuthenticodeSignature -FilePath $clean -ErrorAction SilentlyContinue
-                    $status = $sig.Status
+                    $status = $sig.Status.ToString()
                     $subject = $sig.SignerCertificate.Subject
                     $issuer = $sig.SignerCertificate.Issuer
 
@@ -358,7 +387,7 @@ def get_unsigned_or_invalid_binaries(session: winrm.Session, check_processes: bo
                 $path = $p.Path
                 if (Test-Path $path) {{
                     $sig = Get-AuthenticodeSignature -FilePath $path -ErrorAction SilentlyContinue
-                    $status = $sig.Status
+                    $status = $sig.Status.ToString()
                     $subject = $sig.SignerCertificate.Subject
                     $issuer = $sig.SignerCertificate.Issuer
 

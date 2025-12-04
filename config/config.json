@@ -8,14 +8,126 @@
     "To": ["vimarin@boiler.cl"]
   },
   "Servers": [
-    {
+	{
+      "Name": "ALERCE",
+      "Host": "172.18.14.108",
+      "Username": "grupochien\\mauricio.marin.ext",
+      "Password": "T@648271163959ad",
+      "CriticalServices": ["LanmanServer", "CryptSvc", "Wuauserv", "Netlogon", "mpssvc", "WinRM", "gpsvc", "QEMU-GA", "Zabbix Agent", "TecPos"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs","C:\\TecPos\\__tecpos_logs"]
+	},
+	{
       "Name": "ALERCE-II",
       "Host": "172.18.14.127",
       "Username": "grupochien\\mauricio.marin.ext",
       "Password": "T@648271163959ad",
-      "CriticalServices": ["MSSQLSERVER", "W3SVC", "BrokerInfrastructure","VaultSvc"],
-      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs","C:\\inetpub\\logs\\LogFiles"]
-    }
+      "CriticalServices": ["LanmanServer", "CryptSvc", "Wuauserv", "Netlogon", "mpssvc", "WinRM", "gpsvc", "QEMU-GA", "Zabbix Agent", "TecPos"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs","C:\\TecPos\\__tecpos_logs"]
+	},
+	{
+      "Name": "ALERCE-III",
+      "Host": "172.18.14.128",
+      "Username": "grupochien\\mauricio.marin.ext",
+      "Password": "T@648271163959ad",
+      "CriticalServices": ["LanmanServer", "CryptSvc", "Wuauserv", "Netlogon", "mpssvc", "WinRM", "gpsvc", "QEMU-GA", "Zabbix Agent", "TecPos"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs","C:\\TecPos\\__tecpos_logs"]
+	},
+	{
+      "Name": "POS-VIRTUAL",
+      "Host": "172.18.14.163",
+      "Username": "grupochien\\mauricio.marin.ext",
+      "Password": "T@648271163959ad",
+      "CriticalServices": ["LanmanServer", "CryptSvc", "Wuauserv", "Netlogon", "mpssvc", "WinRM", "gpsvc", "QEMU-GA", "Zabbix Agent"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs"]
+	},
+	{
+      "Name": "PRINTVTRADEX",
+      "Host": "172.18.14.113",
+      "Username": "grupochien\\mauricio.marin.ext",
+      "Password": "T@648271163959ad",
+      "CriticalServices": ["LanmanServer", "CryptSvc", "Wuauserv", "Netlogon", "mpssvc", "WinRM", "gpsvc", "QEMU-GA", "Zabbix Agent"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs"]
+	},
+	{
+      "Name": "BUR-APP01",
+      "Host": "172.18.14.207",
+      "Username": "grupochien\\mauricio.marin.ext",
+      "Password": "T@648271163959ad",
+      "CriticalServices": ["LanmanServer", "CryptSvc", "Wuauserv", "Netlogon", "mpssvc", "WinRM", "gpsvc", "QEMU-GA", "Zabbix Agent","nxlog", "retail-service-center", "ZhuDongFangYu"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs"]
+	},
+	{
+      "Name": "BUR-APP02",
+      "Host": "172.18.14.208",
+      "Username": "grupochien\\mauricio.marin.ext",
+      "Password": "T@648271163959ad",
+      "CriticalServices": ["LanmanServer", "CryptSvc", "Wuauserv", "Netlogon", "mpssvc", "WinRM", "gpsvc", "QEMU-GA", "Zabbix Agent","nxlog", "retail-service-center", "ZhuDongFangYu"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs"]
+	},
+	{
+      "Name": "BUR-APP03",
+      "Host": "172.18.14.212",
+      "Username": "grupochien\\mauricio.marin.ext",
+      "Password": "T@648271163959ad",
+      "CriticalServices": ["LanmanServer", "CryptSvc", "Wuauserv", "Netlogon", "mpssvc", "WinRM", "gpsvc", "QEMU-GA", "Zabbix Agent","nxlog", "retail-service-center", "ZhuDongFangYu"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs"]
+	},
+	{
+      "Name": "BUR-APP04",
+      "Host": "172.18.14.213",
+      "Username": "grupochien\\mauricio.marin.ext",
+      "Password": "T@648271163959ad",
+      "CriticalServices": ["LanmanServer", "CryptSvc", "Wuauserv", "Netlogon", "mpssvc", "WinRM", "gpsvc", "QEMU-GA", "Zabbix Agent","nxlog", "retail-service-center", "ZhuDongFangYu"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs"]
+	},
+	{
+      "Name": "BUR-MONGO",
+      "Host": "172.18.14.214",
+      "Username": "grupochien\\mauricio.marin.ext",
+      "Password": "T@648271163959ad",
+      "CriticalServices": ["LanmanServer", "CryptSvc", "Wuauserv", "Netlogon", "mpssvc", "WinRM", "gpsvc", "QEMU-GA", "Zabbix Agent","MongoDB", "ZhuDongFangYu"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs"]
+	},
+	{
+      "Name": "PVTRADEX2",
+      "Host": "172.18.14.154",
+      "Username": "grupochien\\mauricio.marin.ext",
+      "Password": "T@648271163959ad",
+      "CriticalServices": ["LanmanServer", "CryptSvc", "Wuauserv", "Netlogon", "mpssvc", "WinRM", "gpsvc", "QEMU-GA", "Zabbix Agent","Net Driver HPZ12", "Spooler"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs"]
+	},
+	{
+      "Name": "SINKRO",
+      "Host": "172.18.14.55",
+      "Username": "grupochien\\mauricio.marin.ext",
+      "Password": "T@648271163959ad",
+      "CriticalServices": ["LanmanServer", "CryptSvc", "Wuauserv", "Netlogon", "mpssvc", "WinRM", "gpsvc", "QEMU-GA", "Zabbix Agent","SQLSERVERAGENT", "Tomcat9", "AzureAttestService", "MySQL80", "MSSQLSERVER", "SQLTELEMETRY", "SQLWriter"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs"]
+	},
+	{
+      "Name": "SRV-LOGISTICA",
+      "Host": "172.18.14.200",
+      "Username": "grupochien\\mauricio.marin.ext",
+      "Password": "T@648271163959ad",
+      "CriticalServices": ["LanmanServer", "CryptSvc", "Wuauserv", "Netlogon", "mpssvc", "WinRM", "gpsvc", "QEMU-GA", "Zabbix Agent","MSSQLServerOLAPService", "SQLSERVERAGENT",  "MSSQLSERVER"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs"]
+	},
+	{
+      "Name": "HCPOS-VIRTUAL",
+      "Host": "172.18.14.185",
+      "Username": "grupochien\\mauricio.marin.ext",
+      "Password": "T@648271163959ad",
+      "CriticalServices": ["LanmanServer", "CryptSvc", "Wuauserv", "Netlogon", "mpssvc", "WinRM", "gpsvc", "QEMU-GA", "Zabbix Agent","TecPos", "SQLSERVERAGENT",  "MSSQLSERVER"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs","C:\\TecPos\\__tecpos_logs"]
+	},
+	{
+      "Name": "MARFIL",
+      "Host": "172.18.14.136",
+      "Username": "grupochien\\mauricio.marin.ext",
+      "Password": "T@648271163959ad",
+      "CriticalServices": ["LanmanServer", "CryptSvc", "Wuauserv", "Netlogon", "mpssvc", "WinRM", "gpsvc", "QEMU-GA", "Zabbix Agent","AzureAttestService", "SQLSERVERAGENT",  "MSSQLSERVER"],
+      "LogPaths": ["C:\\Windows\\System32\\winevt\\Logs"]
+	}
   ],
   "Thresholds": {
     "CpuCritical": 60,
