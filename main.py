@@ -27,7 +27,7 @@ from monitor.mailer import send_html_email
 def run_daily_monitor():
 
     print("Iniciando monitoreo diario de servidores Windows...")
-    print("-------------------------------------------")
+    print("---------------------------------------------------")
     print("Cargando configuración...")
     config = load_config()
     smtp_conf = config["Smtp"]
