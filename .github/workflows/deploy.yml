@@ -3,7 +3,7 @@ name: Sync code to app folder
 on:
   push:
     branches:
-      - main    # cambia si usas otra rama
+      - main    # rama principal
 
 jobs:
   deploy:
@@ -37,9 +37,6 @@ jobs:
           if [ ! -d "$VENV_DIR" ]; then
             $PYTHON_BIN -m venv "$VENV_DIR"
           fi
-
-          # Permisos de ejecuciòn para monitor.sh
-          chmod +x monitor.sh
       
           # Activar venv e instalar dependencias
           source "$VENV_DIR/bin/activate"
@@ -47,3 +44,8 @@ jobs:
           if [ -f "requirements.txt" ]; then
             python -m pip install -r requirements.txt
           fi
+      - name: Actualizar permiso de ejecución de monitor.sh
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          # Permisos de ejecuciòn para monitor.sh
+          chmod +x monitor.sh

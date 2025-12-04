@@ -40,7 +40,7 @@ def run_daily_monitor():
 
     for s in servers_conf:
         name = s["Name"]
-        print(f"Monitoreando servidor: {name}")
+        print(f"Analizando servidor: {name}")
         prev_server_state = state.get("servers", {}).get(name, {})
         prev_log_sizes = prev_server_state.get("log_sizes", {})
         try:
@@ -115,7 +115,7 @@ def run_daily_monitor():
                 "log_sizes": current_log_sizes
             }
 
-            print(f"Monitoreo de {name} completado.\n")
+            print(f"Analisis de {name} completado.\n")
         except Exception as ex:
             print(f"Error monitoreando {name}: {ex}")
             # En caso de error, generamos un registro mínimo pero igualmente visible
